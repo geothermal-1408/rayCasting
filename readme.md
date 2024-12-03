@@ -1,6 +1,6 @@
-## Simple RayCasting Using HTML and TypeScript
+# Simple RayCasting Using HTML and TypeScript
 
-# Future Plans
+## Future Plans
 
 <ul>
     <li>Make this A simple 2d Game</li>
