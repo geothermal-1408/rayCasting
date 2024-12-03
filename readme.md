@@ -11,4 +11,3 @@
 
 For Raycasting logic (https://lodev.org/cgtutor/raycasting.html)
 
-Mr Tsoding (https://youtu.be/K1xEkA46CuM?si=hqI50zktexmD0Ptw)
