@@ -5,6 +5,9 @@ class vec2 {
     this.x = x;
     this.y = y;
   }
+  static zero(): vec2 {
+    return new vec2(0, 0);
+  }
   array(): [number, number] {
     return [this.x, this.y];
   }
@@ -48,9 +51,12 @@ class vec2 {
   }
 }
 const EPS = 0.0001;
-const GRID_ROW = 10;
-const GRID_COL = 10;
-const GRID_SIZE = new vec2(GRID_COL, GRID_ROW);
+// const GRID_ROW = 10;
+// const GRID_COL = 10;
+// const GRID_SIZE = new vec2(GRID_COL, GRID_ROW);
+// let SCENE = Array(GRID_ROW)
+//   .fill(0)
+//   .map(() => Array(GRID_COL).fill(0));
 
 function canvasSize(ctx: CanvasRenderingContext2D): vec2 {
   return new vec2(ctx.canvas.width, ctx.canvas.height);
@@ -114,22 +120,53 @@ function raypath(p1: vec2, p2: vec2): vec2 {
 
   return p3;
 }
-function canvasrender(ctx: CanvasRenderingContext2D, p2: vec2 | undefined) {
+
+type scene = Array<Array<number>>;
+
+function sceneSize(scene: scene): vec2 {
+  const y = scene.length;
+  let x = Number.MIN_VALUE;
+  for (let row of scene) {
+    x = Math.max(x, row.length);
+  }
+  return new vec2(x, y);
+}
+
+function canvasrender(
+  ctx: CanvasRenderingContext2D,
+  p1: vec2,
+  p2: vec2 | undefined,
+  position: vec2,
+  size: vec2,
+  scene: scene
+) {
   ctx.reset();
   ctx.fillStyle = "gray";
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.scale(ctx.canvas.width / GRID_COL, ctx.canvas.height / GRID_ROW);
+
+  const gridSize = sceneSize(scene);
+
+  ctx.translate(...position.array());
+  ctx.scale(...size.div(gridSize).array());
   ctx.lineWidth = 0.02;
 
-  ctx.strokeStyle = "black";
-  for (let i = 0; i <= GRID_ROW; ++i) {
-    strokeline(ctx, new vec2(0, i), new vec2(GRID_COL, i));
+  for (let i = 0; i < gridSize.y; ++i) {
+    for (let j = 0; j < gridSize.x; ++j) {
+      if (scene[i][j] !== 0) {
+        ctx.fillStyle = "#300";
+        ctx.fillRect(j, i, 1, 1);
+      }
+    }
   }
-  for (let i = 0; i <= GRID_COL; ++i) {
-    strokeline(ctx, new vec2(i, 0), new vec2(i, GRID_ROW));
+  ctx.strokeStyle = "black";
+  for (let i = 0; i <= gridSize.x; ++i) {
+    strokeline(ctx, new vec2(0, i), new vec2(gridSize.y, i));
+  }
+  for (let i = 0; i <= gridSize.y; ++i) {
+    strokeline(ctx, new vec2(i, 0), new vec2(i, gridSize.x));
   }
 
-  let p1 = new vec2(GRID_ROW * 0.45, GRID_COL * 0.54);
+  //let p1 = gridSize.mul(new vec2(0.15, 0.9));
   ctx.strokeStyle = "magenta";
   createdot(ctx, p1);
   if (p2 !== undefined) {
@@ -139,7 +176,13 @@ function canvasrender(ctx: CanvasRenderingContext2D, p2: vec2 | undefined) {
       strokeline(ctx, p1, p2);
 
       const c = hitcell(p1, p2);
-      if (c.x < 0 || c.x >= GRID_COL || c.y < 0 || c.y >= GRID_ROW) {
+      if (
+        c.x < 0 ||
+        c.x >= gridSize.x ||
+        c.y < 0 ||
+        c.y >= gridSize.y ||
+        scene[c.y][c.x] === 1
+      ) {
         break;
       }
       const p3 = raypath(p1, p2);
@@ -150,6 +193,17 @@ function canvasrender(ctx: CanvasRenderingContext2D, p2: vec2 | undefined) {
 }
 
 (() => {
+  let scene = [
+    [0, 0, 0, 1, 0, 0, 0, 0],
+    [0, 0, 1, 1, 0, 0, 0, 0],
+    [0, 0, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+  ];
+
   const game = document.getElementById("game") as HTMLCanvasElement | null;
   if (game === null) {
     console.error("Game not found");
@@ -168,13 +222,18 @@ function canvasrender(ctx: CanvasRenderingContext2D, p2: vec2 | undefined) {
     return;
   }
 
+  let p1 = sceneSize(scene).mul(new vec2(0.15, 0.9));
   let p2: vec2 | undefined = undefined;
-
+  let mapPos = vec2.zero();
+  let mapSize = canvasSize(ctx).scale(0.5);
   game.addEventListener("mousemove", (e) => {
     p2 = new vec2(e.offsetX, e.offsetY)
       .div(canvasSize(ctx))
-      .mul(new vec2(GRID_COL, GRID_ROW));
-    canvasrender(ctx, p2);
+      .mul(sceneSize(scene));
+
+    canvasrender(ctx, p1, p2, vec2.zero(), canvasSize(ctx), scene);
+    //canvasrender(ctx, p1, p2, mapPos, mapSize, scene);
   });
-  canvasrender(ctx, p2);
+  canvasrender(ctx, p1, p2, vec2.zero(), canvasSize(ctx), scene);
+  //canvasrender(ctx, p1, p2, mapPos, mapSize, scene);
 })();
