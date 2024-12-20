@@ -16,9 +16,7 @@ class vec2 {
         return this;
     }
     div(second) {
-        this.x /= second.x;
-        this.y /= second.y;
-        return this;
+        return new vec2(this.x / second.x, this.y / second.y);
     }
     mul(second) {
         return new vec2(this.x * second.x, this.y * second.y);
@@ -48,13 +46,16 @@ class vec2 {
     distanceTo(second) {
         return this.sub(second).length();
     }
+    static fromAngle(angle) {
+        return new vec2(Math.cos(angle), Math.sin(angle));
+    }
 }
 const EPS = 0.0001;
 // const GRID_ROW = 10;
 // const GRID_COL = 10;
 // const GRID_SIZE = new vec2(GRID_COL, GRID_ROW);
 // let SCENE = Array(GRID_ROW)
-//   .fill(0)
+//   .(0)
 //   .map(() => Array(GRID_COL).fill(0));
 function canvasSize(ctx) {
     return new vec2(ctx.canvas.width, ctx.canvas.height);
@@ -119,8 +120,8 @@ function sceneSize(scene) {
     }
     return new vec2(x, y);
 }
-function canvasrender(ctx, p1, p2, position, size, scene) {
-    ctx.reset();
+function minimap(ctx, player, position, size, scene) {
+    ctx.save();
     ctx.fillStyle = "gray";
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     const gridSize = sceneSize(scene);
@@ -142,26 +143,15 @@ function canvasrender(ctx, p1, p2, position, size, scene) {
     for (let i = 0; i <= gridSize.y; ++i) {
         strokeline(ctx, new vec2(i, 0), new vec2(i, gridSize.x));
     }
-    //let p1 = gridSize.mul(new vec2(0.15, 0.9));
     ctx.strokeStyle = "magenta";
-    createdot(ctx, p1);
-    if (p2 !== undefined) {
-        for (;;) {
-            createdot(ctx, p2);
-            ctx.strokeStyle = "magenta";
-            strokeline(ctx, p1, p2);
-            const c = hitcell(p1, p2);
-            if (c.x < 0 ||
-                c.x >= gridSize.x ||
-                c.y < 0 ||
-                c.y >= gridSize.y ||
-                scene[c.y][c.x] === 1) {
-                break;
-            }
-            const p3 = raypath(p1, p2);
-            p1 = p2;
-            p2 = p3;
-        }
+    createdot(ctx, player.postion);
+    player.postion.add(vec2.fromAngle(player.direction));
+    ctx.restore();
+}
+class Player {
+    constructor(position, direction) {
+        this.postion = position;
+        this.direction = direction;
     }
 }
 (() => {
@@ -184,24 +174,27 @@ function canvasrender(ctx, p1, p2, position, size, scene) {
         console.error("Canvas not supported");
         return;
     }
-    game.width = 800;
-    game.height = 800;
+    const factor = 70;
+    game.width = 16 * factor;
+    game.height = 9 * factor;
     const ctx = game.getContext("2d");
     if (ctx === null) {
-        console.error("2d context not supported");
-        return;
+        throw new Error("2d context not supported");
     }
-    let p1 = sceneSize(scene).mul(new vec2(0.15, 0.9));
-    let p2 = undefined;
-    let mapPos = vec2.zero();
-    let mapSize = canvasSize(ctx).scale(0.5);
-    game.addEventListener("mousemove", (e) => {
-        p2 = new vec2(e.offsetX, e.offsetY)
-            .div(canvasSize(ctx))
-            .mul(sceneSize(scene));
-        canvasrender(ctx, p1, p2, vec2.zero(), canvasSize(ctx), scene);
-        //canvasrender(ctx, p1, p2, mapPos, mapSize, scene);
-    });
-    canvasrender(ctx, p1, p2, vec2.zero(), canvasSize(ctx), scene);
-    //canvasrender(ctx, p1, p2, mapPos, mapSize, scene);
+    let player = new Player(sceneSize(scene).mul(new vec2(0.15, 0.9)), 0);
+    let mapPos = vec2.zero().add(canvasSize(ctx).scale(0.05));
+    let cellsize = ctx.canvas.width * 0.03;
+    let msize = sceneSize(scene).scale(cellsize);
+    // game.addEventListener("mousemove", (e) => {
+    //   //msize = canvasSize(ctx).scale(0.5);
+    //   console.log(msize);
+    //   p2 = new vec2(e.offsetX, e.offsetY)
+    //     .sub(mapPos)
+    //     .div(msize)
+    //     .mul(sceneSize(scene));
+    //   //minimap(ctx, p1, p2, vec2.zero(), canvasSize(ctx).scale(0.5), scene);
+    //   minimap(ctx, p1, p2, mapPos, msize, scene);
+    // });
+    //minimap(ctx, p1, p2, vec2.zero(), canvasSize(ctx).scale(0.5), scene);
+    minimap(ctx, player, mapPos, msize, scene);
 })();
